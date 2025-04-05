@@ -10,6 +10,8 @@ use clap::Args;
 use git2::BranchType;
 use nu_ansi_term::Color;
 use octocrab::{issues::IssueHandler, models::CommentId, pulls::PullRequestHandler, Octocrab};
+use std::fs;
+use std::path::Path;
 
 /// CLI arguments for the `submit` subcommand.
 #[derive(Debug, Clone, Eq, PartialEq, Args)]
@@ -152,7 +154,8 @@ impl SubmitCmd {
                 ctx.repository.push_branch(branch, "origin", self.force)?;
 
                 // Prompt the user for PR metadata.
-                let metadata = Self::prompt_pr_metadata(branch, parent)?;
+                let repo_path = ctx.repository.workdir().map(|p| p.to_path_buf());
+                let metadata = Self::prompt_pr_metadata(branch, parent, repo_path)?;
 
                 // Submit PR.
                 let pr_info = pulls
@@ -229,8 +232,34 @@ impl SubmitCmd {
         Ok(())
     }
 
+    /// Retrieves the pull request template from the repository.
+    fn get_pr_template_from_path(repo_root: &Path) -> Option<String> {
+        let template_path = repo_root.join(".github").join("pull_request_template.md");
+
+        if template_path.exists() {
+            match fs::read_to_string(&template_path) {
+                Ok(content) => Some(content),
+                Err(_) => None,
+            }
+        } else {
+            let alt_template_path = repo_root.join(".github").join("PULL_REQUEST_TEMPLATE.md");
+            if alt_template_path.exists() {
+                match fs::read_to_string(&alt_template_path) {
+                    Ok(content) => Some(content),
+                    Err(_) => None,
+                }
+            } else {
+                None
+            }
+        }
+    }
+
     /// Prompts the user for metadata about the PR during the initial submission process.
-    fn prompt_pr_metadata(branch_name: &str, parent_name: &str) -> StResult<PRCreationMetadata> {
+    fn prompt_pr_metadata(
+        branch_name: &str,
+        parent_name: &str,
+        repo_path: Option<std::path::PathBuf>,
+    ) -> StResult<PRCreationMetadata> {
         let title = inquire::Text::new(
             format!(
                 "Title of pull request (`{}` -> `{}`):",
@@ -240,9 +269,26 @@ impl SubmitCmd {
             .as_str(),
         )
         .prompt()?;
-        let body = inquire::Editor::new("Pull request description")
-            .with_file_extension(".md")
-            .prompt()?;
+
+        let template = if let Some(path) = repo_path {
+            Self::get_pr_template_from_path(&path)
+        } else {
+            None
+        };
+
+        // Create editor with the appropriate initial content
+        let body = if let Some(template_content) = template {
+            println!("Found PR template. You can edit it before submitting.");
+            inquire::Editor::new("Pull request description")
+                .with_file_extension(".md")
+                .with_predefined_text(&template_content)
+                .prompt()?
+        } else {
+            inquire::Editor::new("Pull request description")
+                .with_file_extension(".md")
+                .prompt()?
+        };
+
         let is_draft = inquire::Confirm::new("Is this PR a draft? (default: yes)")
             .with_default(true)
             .prompt()?;
