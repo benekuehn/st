@@ -5,7 +5,8 @@ use clap::Subcommand;
 
 mod local;
 use local::{
-    CheckoutCmd, ConfigCmd, CreateCmd, DeleteCmd, LogCmd, RestackCmd, TrackCmd, UntrackCmd,
+    BottomCmd, CheckoutCmd, ConfigCmd, CreateCmd, DeleteCmd, DownCmd, LogCmd, RestackCmd, TopCmd,
+    TrackCmd, UntrackCmd, UpCmd,
 };
 
 mod remote;
@@ -46,6 +47,18 @@ pub enum Subcommands {
     /// Configure the st application.
     #[clap(visible_alias = "cfg")]
     Config(ConfigCmd),
+    /// Move to the bottom branch of the stack (first branch after trunk).
+    #[clap(visible_alias = "b")]
+    Bottom(BottomCmd),
+    /// Move to the top branch of the stack (tip of the stack).
+    #[clap(visible_alias = "t")]
+    Top(TopCmd),
+    /// Move to the branch above the current branch.
+    #[clap(visible_alias = "u")]
+    Up(UpCmd),
+    /// Move to the branch below the current branch.
+    #[clap(visible_alias = "d")]
+    Down(DownCmd),
 }
 
 impl Subcommands {
@@ -65,6 +78,10 @@ impl Subcommands {
             Self::Track(args) => args.run(ctx),
             Self::Untrack(args) => args.run(ctx),
             Self::Config(args) => args.run(ctx),
+            Self::Bottom(args) => args.run(ctx),
+            Self::Top(args) => args.run(ctx),
+            Self::Up(args) => args.run(ctx),
+            Self::Down(args) => args.run(ctx),
         }
     }
 }

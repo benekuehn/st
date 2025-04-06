@@ -23,3 +23,15 @@ pub use untrack::UntrackCmd;
 
 mod config;
 pub use config::ConfigCmd;
+
+mod bottom;
+pub use bottom::BottomCmd;
+
+mod top;
+pub use top::TopCmd;
+
+mod up;
+pub use up::UpCmd;
+
+mod down;
+pub use down::DownCmd;
