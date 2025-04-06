@@ -41,6 +41,11 @@ pub enum StError {
     /// A generic decoding error occurred.
     #[error("Decoding error: {}", .0)]
     DecodingError(String),
+    /// No stack found or stack is empty.
+    #[error(
+        "No stack found. The current branch might be the trunk branch or no branches are tracked."
+    )]
+    NoStackFound,
 
     // ---- [ `st` application errors (remote) ] ----
     /// A remote pull request could not be found.
