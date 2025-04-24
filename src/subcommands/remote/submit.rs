@@ -234,24 +234,31 @@ impl SubmitCmd {
 
     /// Retrieves the pull request template from the repository.
     fn get_pr_template_from_path(repo_root: &Path) -> Option<String> {
-        let template_path = repo_root.join(".github").join("pull_request_template.md");
+        // Check paths in .github directory
+        let github_paths = [
+            repo_root.join(".github").join("pull_request_template.md"),
+            repo_root.join(".github").join("PULL_REQUEST_TEMPLATE.md"),
+        ];
 
-        if template_path.exists() {
-            match fs::read_to_string(&template_path) {
-                Ok(content) => Some(content),
-                Err(_) => None,
-            }
-        } else {
-            let alt_template_path = repo_root.join(".github").join("PULL_REQUEST_TEMPLATE.md");
-            if alt_template_path.exists() {
-                match fs::read_to_string(&alt_template_path) {
-                    Ok(content) => Some(content),
-                    Err(_) => None,
+        // Check paths in root directory
+        let root_paths = [
+            repo_root.join("pull_request_template.md"),
+            repo_root.join("PULL_REQUEST_TEMPLATE.md"),
+        ];
+
+        // Combine all paths to check
+        let template_paths = [&github_paths[..], &root_paths[..]].concat();
+
+        // Try each path in order until we find a valid template
+        for path in template_paths {
+            if path.exists() {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    return Some(content);
                 }
-            } else {
-                None
             }
         }
+
+        None
     }
 
     /// Prompts the user for metadata about the PR during the initial submission process.
@@ -307,7 +314,7 @@ impl SubmitCmd {
         stack: &[String],
     ) -> StResult<String> {
         let mut comment = String::new();
-        comment.push_str("### 📚 Stack Overview");
+        comment.push_str("### 📚 Stack Overview\n");
         comment.push_str("Pulls submitted in this stack:\n");
 
         // Display all branches in the stack.
